@@ -1,0 +1,10 @@
+bcrypt
+fastapi>=0.100.0
+Hypercorn~=0.16.0
+jinja2~=3.1.3
+piccolo[postgres]~=1.5.0
+piccolo_admin~=1.3.1
+requests
+starlette~=0.36.3
+bcrypt~=4.1.2
+pydantic~=2.6.4
