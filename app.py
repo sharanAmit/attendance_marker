@@ -14,7 +14,7 @@ from starlette.staticfiles import StaticFiles
 
 from home.endpoints import HomeEndpoint
 from home.piccolo_app import APP_CONFIG
-from home.tables import Task, NewUser, DeviceUser, Device, Attendance
+from home.tables import Task, NewUser, DeviceUser, Device, Attendance, Firm
 from utils import create_jwt_token, extract_token
 
 app = FastAPI(
@@ -56,6 +56,17 @@ class NewUserModelOut(BaseModel):
     user_image: str
 
 
+class CreateFirmModelOut(BaseModel):
+    firm_name: str
+    firm_image: str
+    firm_address: str
+    firm_latitude: str
+    firm_longitude: str
+    firm_contact_number: str
+    firm_mail_address: str
+    firm_type: str
+
+
 class LoginUserModelIn(BaseModel):
     user_name: str
     password: str
@@ -72,6 +83,17 @@ class ClockInModel(BaseModel):
     check_in_address: str
 
 
+class CreateFirmModel(BaseModel):
+    firm_name: str
+    firm_image: str
+    firm_address: str
+    firm_latitude: str
+    firm_longitude: str
+    firm_contact_number: str
+    firm_mail_address: str
+    firm_type: str
+
+
 class ClockOutModel(BaseModel):
     id: int
     check_out_latitude: str
@@ -85,10 +107,19 @@ async def tasks():
 
 
 @app.get("/get_user/", response_model=NewUserModelOut)
-async def get_user(ids: tuple[str, int] = Depends(extract_token)):
+async def get_user(ids: tuple[int, int] = Depends(extract_token)):
     user = await NewUser.objects().get(NewUser.id == ids[1])
     return NewUserModelOut(user_name=user.user_name, first_name=user.first_name,
                            last_name=user.last_name, user_image=user.user_image)
+
+
+@app.get("/get_firm/", response_model=CreateFirmModelOut)
+async def get_firm(ids: tuple[int, int] = Depends(extract_token)):
+    firm_detail = await Firm.objects().get(Firm.user_id == ids[1])
+    return CreateFirmModelOut(firm_name=firm_detail.firm_name,
+                              firm_address=firm_detail.firm_address, firm_latitude=firm_detail.firm_latitude,
+                              firm_longitude=firm_detail.firm_longitude, firm_contact_number=firm_detail.contact_number,
+                              firm_mail_address=firm_detail.mail_address, firm_type=firm_detail.firm_type)
 
 
 @app.post("/login/", response_model=dict)
@@ -147,7 +178,7 @@ async def login(login_model: LoginUserModelIn):
 
 
 @app.post("/clock_in/", response_model=dict)
-async def clock_in(clock_in_model: ClockInModel, ids: tuple[str, int] = Depends(extract_token)):
+async def clock_in(clock_in_model: ClockInModel, ids: tuple[int, int] = Depends(extract_token)):
     try:
         user_clock_in = Attendance(
             user_id=ids[1],
@@ -163,8 +194,31 @@ async def clock_in(clock_in_model: ClockInModel, ids: tuple[str, int] = Depends(
         return {"error": e}
 
 
+# Todo :-  this is form data ...please convert it into multipart and form data
+@app.post("/add_firm/", response_model=dict)
+async def add_firm(firm_model: CreateFirmModel, ids: tuple[int, int] = Depends(extract_token)):
+    try:
+        create_firm = Firm(
+            user_id=ids[1],
+            firm_name=firm_model.firm_name,
+            firm_image=firm_model.firm_image,
+            contact_number=firm_model.firm_contact_number,
+            mail_address=firm_model.firm_mail_address,
+            firm_address=firm_model.firm_address,
+            firm_latitude=firm_model.firm_latitude,
+            firm_longitude=firm_model.firm_longitude,
+            firm_type=firm_model.firm_type,
+            device_id=ids[0]
+        )
+        await create_firm.save()
+        return {"message": "Firm Created Successfully"}
+    except Exception as e:
+        print(e)
+        return {"error": e}
+
+
 @app.post("/clock_out/", response_model=dict)
-async def clock_in(clock_out_model: ClockOutModel, ids: tuple[str, int] = Depends(extract_token)):
+async def clock_in(clock_out_model: ClockOutModel, ids: tuple[int, int] = Depends(extract_token)):
     try:
         attendance = await Attendance.objects().get(Attendance.id == clock_out_model.id)
         if attendance:

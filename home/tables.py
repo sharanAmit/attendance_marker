@@ -115,6 +115,19 @@ class Attendance(Table):
 
 class Firm(Table):
     id: Serial
+    user_id = ForeignKey(
+        references=NewUser,
+        on_delete=OnDelete.no_action,
+        on_update=OnUpdate.no_action,
+        target_column=None,
+        null=True,
+        primary_key=False,
+        unique=False,
+        index=True,
+        index_method=IndexMethod.btree,
+        db_column_name=None,
+        secret=False,
+    )
     firm_name = Varchar()
     firm_image = Text()
     contact_number = Varchar()
@@ -123,7 +136,23 @@ class Firm(Table):
     firm_latitude = Varchar()
     firm_longitude = Varchar()
     firm_type = Varchar()
-
+    firm_created_time = Timestamptz(
+        default=TimestamptzNow(),
+        null=False,
+    )
+    device_id = ForeignKey(
+        references=Device,
+        on_delete=OnDelete.no_action,
+        on_update=OnUpdate.no_action,
+        target_column=None,
+        null=True,
+        primary_key=False,
+        unique=False,
+        index=True,
+        index_method=IndexMethod.btree,
+        db_column_name=None,
+        secret=False,
+    )
 
 
 class Post(Table):
