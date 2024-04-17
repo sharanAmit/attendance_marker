@@ -57,6 +57,7 @@ class NewUserModelOut(BaseModel):
 
 
 class CreateFirmModelOut(BaseModel):
+    firm_id: str
     firm_name: str
     firm_image: str
     firm_address: str
@@ -81,6 +82,13 @@ class ClockInModel(BaseModel):
     check_in_latitude: str
     check_in_longitude: str
     check_in_address: str
+
+
+class UpdateFirmLocation(BaseModel):
+    firm_id: str
+    update_address: str
+    update_latitude: str
+    update_longitude: str
 
 
 class CreateFirmModel(BaseModel):
@@ -113,13 +121,21 @@ async def get_user(ids: tuple[int, int] = Depends(extract_token)):
                            last_name=user.last_name, user_image=user.user_image)
 
 
-@app.get("/get_firm/", response_model=CreateFirmModelOut)
+@app.get("/get_firm/", response_model=t.List[CreateFirmModelOut] | dict)
 async def get_firm(ids: tuple[int, int] = Depends(extract_token)):
-    firm_detail = await Firm.objects().get(Firm.user_id == ids[1])
-    return CreateFirmModelOut(firm_name=firm_detail.firm_name,
-                              firm_address=firm_detail.firm_address, firm_latitude=firm_detail.firm_latitude,
-                              firm_longitude=firm_detail.firm_longitude, firm_contact_number=firm_detail.contact_number,
-                              firm_mail_address=firm_detail.mail_address, firm_type=firm_detail.firm_type)
+    firm_details = await Firm.objects().where(Firm.user_id == ids[1])
+    if firm_details:
+        return [CreateFirmModelOut(
+            firm_id=firm_detail.id,
+            firm_name=firm_detail.firm_name,
+            firm_image=firm_detail.firm_image,
+            firm_address=firm_detail.firm_address, firm_latitude=firm_detail.firm_latitude,
+            firm_longitude=firm_detail.firm_longitude,
+            firm_contact_number=firm_detail.contact_number,
+            firm_mail_address=firm_detail.mail_address, firm_type=firm_detail.firm_type) for
+            firm_detail in firm_details]
+    else:
+        return {"message": "firm not found"}
 
 
 @app.post("/login/", response_model=dict)
@@ -178,6 +194,23 @@ async def login(login_model: LoginUserModelIn):
 
 
 @app.post("/clock_in/", response_model=dict)
+async def clock_in(clock_in_model: ClockInModel, ids: tuple[int, int] = Depends(extract_token)):
+    try:
+        user_clock_in = Attendance(
+            user_id=ids[1],
+            check_in_latitude=clock_in_model.check_in_latitude,
+            check_in_longitude=clock_in_model.check_in_longitude,
+            check_in_address=clock_in_model.check_in_address,
+            device_id=ids[0]
+        )
+        await user_clock_in.save()
+        return {"message": "Clocked In Successfully", "id": user_clock_in.id}
+    except Exception as e:
+        print(e)
+        return {"error": e}
+
+
+@app.post("/update_firm_location/", response_model=dict)
 async def clock_in(clock_in_model: ClockInModel, ids: tuple[int, int] = Depends(extract_token)):
     try:
         user_clock_in = Attendance(
